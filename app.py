@@ -4,9 +4,18 @@ import re
 import nltk
 from nltk.stem.porter import PorterStemmer
 from nltk.corpus import stopwords
-stopwords_set = set(stopwords.words('english'))
-emoticon_pattern = re.compile('(?::|;|=)(?:-)?(?:\)|\(|D|P)')
 
+# Download stopwords if not found
+try:
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('stopwords')
+
+# Now get the stopwords
+stopwords_set = set(stopwords.words('english'))
+
+# Fix invalid escape sequences in regex patterns
+emoticon_pattern = re.compile(r'(?::|;|=)(?:-)?(?:\)|\(|D|P)')
 
 app = Flask(__name__)
 
@@ -16,17 +25,13 @@ with open('clf.pkl', 'rb') as f:
 with open('tfidf.pkl', 'rb') as f:
     tfidf = pickle.load(f)
 
-
-
-
-
 def preprocessing(text):
     text = re.sub('<[^>]*>', '', text)
     emojis = emoticon_pattern.findall(text)
-    text = re.sub('[\W+]', ' ', text.lower()) + ' '.join(emojis).replace('-', '')
+    # Fix invalid escape sequence in regex
+    text = re.sub(r'[\W+]', ' ', text.lower()) + ' '.join(emojis).replace('-', '')
     prter = PorterStemmer()
     text = [prter.stem(word) for word in text.split() if word not in stopwords_set]
-
     return " ".join(text)
 
 @app.route('/', methods=['GET', 'POST'])
